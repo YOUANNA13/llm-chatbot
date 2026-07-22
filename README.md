@@ -1,12 +1,13 @@
-# 🤖 LLM ChatBot
+# LLM ChatBot
 
-A simple AI chatbot built with Python and Google's Gemini API.
+A chatbot built with Python and the Google Gemini API. This project is being developed incrementally to understand how modern LLM applications are built, starting from a basic chatbot and progressing toward a production-ready RAG system.
 
-## Features
+## Current Features
 
 - Chat with Gemini
-- Secure API key using .env
-- Error handling
+- Secure API key management using `.env`
+- Basic error handling
+- Conversation history
 
 ## Tech Stack
 
@@ -14,8 +15,39 @@ A simple AI chatbot built with Python and Google's Gemini API.
 - Google GenAI SDK
 - python-dotenv
 
-## Future Improvements
+## Project Roadmap
 
-- Chat History
-- Streaming
-- RAG
+- [x] V1 - Simple ChatBot
+- [x] V2 - Conversation History
+- [ ] V3 - Streaming Responses
+- [ ] V4 - System Prompt
+- [ ] V5 - Streamlit Interface
+- [ ] V6 - PDF Upload
+- [ ] V7 - Retrieval-Augmented Generation (RAG)
+- [ ] V8 - FAISS Vector Database
+- [ ] V9 - Source Citations
+- [ ] V10 - Docker Deployment
+
+## Project Structure
+
+```text
+LLM-Chatbot/
+│
+├── main.py
+├── .env
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+## Learning Objectives
+
+This project is intended to explore the main components of modern LLM applications, including:
+
+- Prompt engineering
+- Conversation management
+- Streaming responses
+- Retrieval-Augmented Generation (RAG)
+- Embeddings
+- Vector databases
+- Production deployment
