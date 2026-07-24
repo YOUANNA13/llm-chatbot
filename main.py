@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 import os
 
@@ -15,11 +16,22 @@ if not api_key:
 # Create Gemini client
 client = genai.Client(api_key=api_key)
 
+# System Prompt
+system_prompt = """
+You are an AI tutor.
+
+Rules:
+- Explain concepts simply.
+- Give examples whenever possible.
+- Keep answers concise.
+- If you don't know the answer, say so.
+"""
+
 # Store conversation history
 history = []
 
 print("=" * 50)
-print("🤖 Simple Gemini ChatBot")
+print("Simple Gemini ChatBot")
 print("Type 'exit' to quit")
 print("=" * 50)
 
@@ -38,35 +50,43 @@ while True:
         "text": question
     })
 
-    # Convert our history to Gemini format
+    # Convert history to Gemini format
     contents = []
 
     for message in history:
-        contents.append(
-            {
-                "role": message["role"],
-                "parts": [
-                    {
-                        "text": message["text"]
-                    }
-                ]
-            }
-        )
+        contents.append({
+            "role": message["role"],
+            "parts": [
+                {
+                    "text": message["text"]
+                }
+            ]
+        })
 
     try:
-        # Send the ENTIRE conversation
-        response = client.models.generate_content(
+        print("\nAssistant: ", end="", flush=True)
+
+        response = client.models.generate_content_stream(
             model="gemini-3.1-flash-lite",
-            contents=contents
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt
+            )
         )
 
-        print("\nAssistant:")
-        print(response.text)
+        full_response = ""
+
+        for chunk in response:
+            if chunk.text:
+                print(chunk.text, end="", flush=True)
+                full_response += chunk.text
+
+        print()
 
         # Save assistant response
         history.append({
             "role": "assistant",
-            "text": response.text
+            "text": full_response
         })
 
     except Exception as e:

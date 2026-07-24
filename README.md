@@ -19,8 +19,8 @@ A chatbot built with Python and the Google Gemini API. This project is being dev
 
 - [x] V1 - Simple ChatBot
 - [x] V2 - Conversation History
-- [ ] V3 - Streaming Responses
-- [ ] V4 - System Prompt
+- [x] V3 - Streaming Responses
+- [x] V4 - System Prompt
 - [ ] V5 - Streamlit Interface
 - [ ] V6 - PDF Upload
 - [ ] V7 - Retrieval-Augmented Generation (RAG)
