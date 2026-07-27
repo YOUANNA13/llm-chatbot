@@ -5,7 +5,12 @@ from dotenv import load_dotenv
 from pdf_loader import load_pdf
 from chunker import chunk_text
 from embeddings import get_embedding
-from vector_store import create_vector_store, search
+from vector_store import (
+    create_vector_store,
+    search,
+    save_vector_store,
+    load_vector_store
+)
 import os
 
 load_dotenv()
@@ -32,6 +37,17 @@ if "messages" not in st.session_state:
 if "pdf_ready" not in st.session_state:
     st.session_state.pdf_ready = False
 
+# Load saved vector store if it exists
+if (
+    os.path.exists("data/index.faiss")
+    and
+    os.path.exists("data/chunks.pkl")
+    and
+    not st.session_state.pdf_ready
+):
+    load_vector_store()
+    st.session_state.pdf_ready = True
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
@@ -41,7 +57,6 @@ uploaded_file = st.file_uploader(
     type="pdf"
 )
 
-# Process PDF only once
 if uploaded_file is not None and not st.session_state.pdf_ready:
 
     with st.spinner("Processing PDF..."):
@@ -57,7 +72,12 @@ if uploaded_file is not None and not st.session_state.pdf_ready:
                 get_embedding(client, chunk)
             )
 
-        create_vector_store(embeddings, chunks)
+        create_vector_store(
+            embeddings,
+            chunks
+        )
+
+        save_vector_store()
 
         st.session_state.pdf_ready = True
 
@@ -77,7 +97,6 @@ if question:
 
     contents = []
 
-    # Retrieve relevant chunks from FAISS
     if st.session_state.pdf_ready:
 
         question_embedding = get_embedding(
@@ -93,7 +112,7 @@ if question:
             "role": "user",
             "parts": [{
                 "text": f"""
-Use ONLY the following context to answer the question.
+Use ONLY the following context to answer the user's question.
 
 Context:
 
@@ -102,7 +121,6 @@ Context:
             }]
         })
 
-    # Add chat history
     for message in st.session_state.messages:
         contents.append({
             "role": message["role"],
