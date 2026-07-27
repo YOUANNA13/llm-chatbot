@@ -3,6 +3,9 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from pdf_loader import load_pdf
+from chunker import chunk_text
+from embeddings import get_embedding
+from vector_store import create_vector_store, search
 import os
 
 load_dotenv()
@@ -26,6 +29,9 @@ st.title("LLM ChatBot")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "pdf_ready" not in st.session_state:
+    st.session_state.pdf_ready = False
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
@@ -35,10 +41,27 @@ uploaded_file = st.file_uploader(
     type="pdf"
 )
 
-pdf_text = ""
+# Process PDF only once
+if uploaded_file is not None and not st.session_state.pdf_ready:
 
-if uploaded_file is not None:
-    pdf_text = load_pdf(uploaded_file)
+    with st.spinner("Processing PDF..."):
+
+        pdf_text = load_pdf(uploaded_file)
+
+        chunks = chunk_text(pdf_text)
+
+        embeddings = []
+
+        for chunk in chunks:
+            embeddings.append(
+                get_embedding(client, chunk)
+            )
+
+        create_vector_store(embeddings, chunks)
+
+        st.session_state.pdf_ready = True
+
+    st.success("PDF processed successfully!")
 
 question = st.chat_input("Ask anything")
 
@@ -54,17 +77,27 @@ if question:
 
     contents = []
 
-    # Add the PDF as the first message
-    if pdf_text:
+    # Retrieve relevant chunks from FAISS
+    if st.session_state.pdf_ready:
+
+        question_embedding = get_embedding(
+            client,
+            question
+        )
+
+        retrieved_chunks = search(question_embedding)
+
+        context = "\n\n".join(retrieved_chunks)
+
         contents.append({
             "role": "user",
             "parts": [{
                 "text": f"""
-This is the content of the uploaded PDF.
+Use ONLY the following context to answer the question.
 
-{pdf_text}
+Context:
 
-Answer the user's questions using this document.
+{context}
 """
             }]
         })
