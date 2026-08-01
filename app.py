@@ -37,7 +37,6 @@ if "messages" not in st.session_state:
 if "pdf_ready" not in st.session_state:
     st.session_state.pdf_ready = False
 
-# Load saved vector store if it exists
 if (
     os.path.exists("data/index.faiss")
     and
@@ -61,15 +60,18 @@ if uploaded_file is not None and not st.session_state.pdf_ready:
 
     with st.spinner("Processing PDF..."):
 
-        pdf_text = load_pdf(uploaded_file)
+        pages = load_pdf(uploaded_file)
 
-        chunks = chunk_text(pdf_text)
+        chunks = chunk_text(pages)
 
         embeddings = []
 
         for chunk in chunks:
             embeddings.append(
-                get_embedding(client, chunk)
+                get_embedding(
+                    client,
+                    chunk["text"]
+                )
             )
 
         create_vector_store(
@@ -97,6 +99,8 @@ if question:
 
     contents = []
 
+    retrieved_chunks = []
+
     if st.session_state.pdf_ready:
 
         question_embedding = get_embedding(
@@ -106,7 +110,10 @@ if question:
 
         retrieved_chunks = search(question_embedding)
 
-        context = "\n\n".join(retrieved_chunks)
+        context = "\n\n".join(
+            chunk["text"]
+            for chunk in retrieved_chunks
+        )
 
         contents.append({
             "role": "user",
@@ -146,6 +153,22 @@ Context:
             if chunk.text:
                 full_response += chunk.text
                 placeholder.markdown(full_response)
+
+        if retrieved_chunks:
+
+            pages = sorted(
+                set(
+                    chunk["page"]
+                    for chunk in retrieved_chunks
+                )
+            )
+
+            full_response += "\n\n### Sources\n"
+
+            for page in pages:
+                full_response += f"- Page {page}\n"
+
+            placeholder.markdown(full_response)
 
     st.session_state.messages.append({
         "role": "assistant",
