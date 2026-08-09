@@ -26,7 +26,7 @@ A chatbot built with Python and the Google Gemini API. This project is being dev
 - [x] V7 - Retrieval-Augmented Generation (RAG)
 - [x] V8 - FAISS Vector Database
 - [x] V9 - Source Citations
-- [ ] V10 - Docker Deployment
+- [ ] V10 -Deployment
 
 ## Project Structure
 
