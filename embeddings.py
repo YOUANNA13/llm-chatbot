@@ -8,6 +8,7 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
+
 def get_embedding(client, text):
 
     response = client.models.embed_content(
