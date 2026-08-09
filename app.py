@@ -55,6 +55,44 @@ def get_base64_image(path):
 logo_base64 = get_base64_image("assets/logo.png")
 
 # ---------------------------------------------------------
+# Session identity + persistence.
+#
+# IMPORTANT: this must run BEFORE the splash screen below. Writing to
+# st.query_params (to store a persistent ?sid=... token) can trigger an
+# extra script rerun. If that rerun happened AFTER the splash markdown
+# was inserted, Streamlit reconciles it away almost instantly - the
+# splash element gets added then removed within milliseconds, so it
+# never becomes visible. Running this block first avoids that.
+#
+# A hard browser refresh normally wipes st.session_state entirely, which
+# would mean re-uploading PDFs every time. To survive a refresh, we give
+# each browser tab a persistent token in the URL (?sid=...) and use it as
+# the name of a per-session folder on disk.
+# ---------------------------------------------------------
+SESSIONS_DIR = "data/sessions"
+
+if "session_id" not in st.session_state:
+    existing_sid = st.query_params.get("sid")
+    if existing_sid:
+        st.session_state.session_id = existing_sid
+    else:
+        new_sid = uuid.uuid4().hex[:12]
+        st.session_state.session_id = new_sid
+        st.query_params["sid"] = new_sid
+
+session_id = st.session_state.session_id
+session_dir = os.path.join(SESSIONS_DIR, session_id)
+
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = VectorStore()
+    st.session_state.vector_store.load(session_dir)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+vector_store = st.session_state.vector_store
+
+# ---------------------------------------------------------
 # Global theme CSS
 # ---------------------------------------------------------
 st.markdown(
@@ -209,44 +247,6 @@ if logo_base64 and not st.session_state.splash_done:
         unsafe_allow_html=True
     )
     st.session_state.splash_done = True
-
-# ---------------------------------------------------------
-# Session identity + persistence.
-#
-# A hard browser refresh normally wipes st.session_state entirely, which
-# would mean re-uploading PDFs every time. To survive a refresh, we give
-# each browser tab a persistent token in the URL (?sid=...) and use it as
-# the name of a per-session folder on disk. This is still fully isolated
-# per session (unlike the old shared data/index.faiss file) - it just
-# also survives reloads as long as the URL (with ?sid=...) is kept.
-#
-# Note: anyone with that exact URL could load the same session's
-# documents - fine for a personal demo, but not real user auth. If this
-# ever needs real multi-user security, swap this for authenticated
-# accounts instead of a URL token.
-# ---------------------------------------------------------
-SESSIONS_DIR = "data/sessions"
-
-if "session_id" not in st.session_state:
-    existing_sid = st.query_params.get("sid")
-    if existing_sid:
-        st.session_state.session_id = existing_sid
-    else:
-        new_sid = uuid.uuid4().hex[:12]
-        st.session_state.session_id = new_sid
-        st.query_params["sid"] = new_sid
-
-session_id = st.session_state.session_id
-session_dir = os.path.join(SESSIONS_DIR, session_id)
-
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = VectorStore()
-    st.session_state.vector_store.load(session_dir)
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-vector_store = st.session_state.vector_store
 
 # ---------------------------------------------------------
 # App content
