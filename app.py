@@ -4,7 +4,7 @@ from google.genai import types
 from dotenv import load_dotenv
 from pdf_loader import load_pdf
 from chunker import chunk_text
-from embeddings import get_embedding
+from embeddings import get_embedding, get_embeddings_batch
 from vector_store import VectorStore
 import os
 import base64
@@ -322,21 +322,35 @@ if uploaded_files:
 
         with st.spinner(f"Indexing {len(new_files)} document(s)..."):
 
+            # Gather every new file's chunks first, so embedding can be
+            # batched ONCE across all of them together, instead of running
+            # a separate batching pass per file (which fires bursts of
+            # requests close together and is more likely to hit the
+            # per-minute rate limit when several PDFs are uploaded at once).
+            all_chunks = []
+            file_ranges = []  # (filename, start_index, end_index)
+
             for uploaded_file in new_files:
 
                 pages = load_pdf(uploaded_file)
-
                 chunks = chunk_text(pages, filename=uploaded_file.name)
 
-                embeddings = [
-                    get_embedding(client, chunk["text"])
-                    for chunk in chunks
-                ]
+                start = len(all_chunks)
+                all_chunks.extend(chunks)
+                end = len(all_chunks)
 
+                file_ranges.append((uploaded_file.name, start, end))
+
+            all_embeddings = get_embeddings_batch(
+                client,
+                [chunk["text"] for chunk in all_chunks]
+            )
+
+            for filename, start, end in file_ranges:
                 vector_store.add_documents(
-                    embeddings,
-                    chunks,
-                    filename=uploaded_file.name
+                    all_embeddings[start:end],
+                    all_chunks[start:end],
+                    filename=filename
                 )
 
             vector_store.save(session_dir)
